@@ -1,0 +1,37 @@
+#!/bin/bash
+
+function impl () {
+	TRACEPOINTS=/sys/kernel/debug/tracing
+	WAIT="sleep "$1
+
+	echo '<script class="trace-data" type="application/text">'
+	echo 'PROCESS DUMP'
+	ps -A -o user,pid,ppid,vsz,rss,wchan,addr=pc,s,args=NAME,comm=COMM&&ps -AT -o user,pid,tid,cmd
+	echo "</script>"
+
+	echo > ${TRACEPOINTS}/trace
+	echo 1 > ${TRACEPOINTS}/events/sched/enable
+	echo 1 > ${TRACEPOINTS}/tracing_on
+	${WAIT}
+	echo 0 > ${TRACEPOINTS}/tracing_on
+	echo 0 > ${TRACEPOINTS}/events/sched/enable
+
+	echo '<script class="trace-data" type="application/text">'
+	cat ${TRACEPOINTS}/trace
+	echo "</script>"
+}
+
+if [ $# -ne 1 ]; then
+	echo " usage: # ./get_trace second_to_instrument " 1>&2
+	exit 1
+fi
+
+echo "<!DOCTYPE html>"
+echo "<html>"
+echo "<title>Linux System Trace</title>"
+echo "<body>"
+
+impl $1
+
+echo "</body>"
+echo "</html>"
